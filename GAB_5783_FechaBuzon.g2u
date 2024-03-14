@@ -1,0 +1,554 @@
+Program.Sub.ScreenSU.Start
+Gui.F_FechaBuzon..Create
+Gui.F_FechaBuzon..Caption("Fecha Buzon")
+Gui.F_FechaBuzon..Size(6795,3090)
+Gui.F_FechaBuzon..MinX(0)
+Gui.F_FechaBuzon..MinY(0)
+Gui.F_FechaBuzon..Position(0,0)
+Gui.F_FechaBuzon..BackColor(-2147483633)
+Gui.F_FechaBuzon..MousePointer(0)
+Gui.F_FechaBuzon..Event(UnLoad,F_FechaBuzon_UnLoad)
+Gui.F_FechaBuzon.lbl1.Create(Label,"Fecha Buzon",True,1935,255,0,480,495,True,0,"Arial",10,-2147483633,0)
+Gui.F_FechaBuzon.lbl2.Create(Label,"Dias de Credito",True,1935,255,0,480,900,True,0,"Arial",10,-2147483633,0)
+Gui.F_FechaBuzon.lbl3.Create(Label,"Vencimiento",True,1935,255,0,480,1290,True,0,"Arial",10,-2147483633,0)
+Gui.F_FechaBuzon.dtpFechaBuzon.Create(DatePicker)
+Gui.F_FechaBuzon.dtpFechaBuzon.Size(1935,285)
+Gui.F_FechaBuzon.dtpFechaBuzon.Position(2925,390)
+Gui.F_FechaBuzon.dtpFechaBuzon.Event(Change,dtpFechaBuzon_Change)
+Gui.F_FechaBuzon.txtDiasCredito.Create(TextBox,"",True,1500,300,0,2910,825,True,0,"Arial",8,-2147483643,1)
+Gui.F_FechaBuzon.txtDiasCredito.Locked(True)
+Gui.F_FechaBuzon.txtVencimiento.Create(TextBox,"",True,1500,300,0,2910,1245,True,0,"Arial",8,-2147483643,1)
+Gui.F_FechaBuzon.txtVencimiento.Locked(True)
+Gui.F_FechaBuzon.cmdSaveFechaBuzon.Create(Button)
+Gui.F_FechaBuzon.cmdSaveFechaBuzon.Size(1695,375)
+Gui.F_FechaBuzon.cmdSaveFechaBuzon.Position(4455,1890)
+Gui.F_FechaBuzon.cmdSaveFechaBuzon.Caption("GUARDAR")
+Gui.F_FechaBuzon.cmdSaveFechaBuzon.FontSize(10)
+Gui.F_FechaBuzon.cmdSaveFechaBuzon.Event(Click,cmdSaveFechaBuzon_Click)
+Gui.F_FechaBuzonDash..Create
+Gui.F_FechaBuzonDash..Caption("Fecha Buzon Dashboard")
+Gui.F_FechaBuzonDash..Size(16395,11460)
+Gui.F_FechaBuzonDash..MinX(0)
+Gui.F_FechaBuzonDash..MinY(0)
+Gui.F_FechaBuzonDash..Position(0,0)
+Gui.F_FechaBuzonDash..BackColor(-2147483633)
+Gui.F_FechaBuzonDash..MousePointer(0)
+Gui.F_FechaBuzonDash..Event(UnLoad,F_FechaBuzon_UnLoad)
+Gui.F_FechaBuzonDash.tabFB.Create(Tab)
+Gui.F_FechaBuzonDash.tabFB.Size(15930,10125)
+Gui.F_FechaBuzonDash.tabFB.Position(60,555)
+Gui.F_FechaBuzonDash.tabFB.Tabs(2)
+Gui.F_FechaBuzonDash.tabFB.SetTab(0)
+Gui.F_FechaBuzonDash.tabFB.Caption("FECHA BUZON PESOS")
+Gui.F_FechaBuzonDash.tabFB.SetTab(1)
+Gui.F_FechaBuzonDash.tabFB.Caption("FECHA BUZON USD")
+Gui.F_FechaBuzonDash.GsGridMXN.Create(GsGridControl)
+Gui.F_FechaBuzonDash.GsGridMXN.Size(15675,9525)
+Gui.F_FechaBuzonDash.GsGridMXN.Position(30,105)
+Gui.F_FechaBuzonDash.GsGridMXN.Parent("tabFB",0)
+Gui.F_FechaBuzonDash.GsGridUSD.Create(GsGridControl)
+Gui.F_FechaBuzonDash.GsGridUSD.Size(15555,9465)
+Gui.F_FechaBuzonDash.GsGridUSD.Position(105,120)
+Gui.F_FechaBuzonDash.GsGridUSD.Parent("tabFB",1)
+Gui.F_FechaBuzonDash.cmdReload.Create(Button)
+Gui.F_FechaBuzonDash.cmdReload.Size(1380,375)
+Gui.F_FechaBuzonDash.cmdReload.Position(14595,165)
+Gui.F_FechaBuzonDash.cmdReload.Caption("Actualizar")
+Gui.F_FechaBuzonDash.cmdReload.Event(Click,cmdReload_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+v.Global.sBatchNum.Declare
+v.Global.sVendor.Declare
+v.Global.sGLAccount.Declare
+v.Global.sInvoice.Declare
+v.Global.sVencimiento.Declare
+v.Global.lCreditDay.Declare
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+v.Local.sSQL.Declare
+v.Local.sTerminal.Declare
+v.Local.sBatchCheck.Declare
+v.Local.sBatchNumRep.Declare
+V.Local.bExists.Declare
+
+'This project is for Mexican Customers who use Electronic Accounting and Require a Fecha Buzon(promise date)
+'On AP>Tansactions>AP Batch Entry > New Invoice Script 2 you can open to set a Fecha Buzon(date after adding the supplier credit days Vendor_pay_to.) and add it to the Discount Due Date
+'Added same process on AP Batch Entry > Invoice/Acurrals
+
+F.ODBC.Connection!conx.OpenCompanyConnection
+'AP Batch Entry > New Invoice Populate Hook
+
+
+'CHECK GAB_5783_FECHABUZON TABLE IF DOESNT EXISTS CREATE TABLE
+F.ODBC.Connection!conx.TableExists("GAB_5783_FECHABUZON",V.Local.bExists)
+F.Intrinsic.Control.If(v.Local.bExists,=,False)
+	V.Local.sSQL.Set("CREATE TABLE GAB_5783_FECHABUZON( BATCH_NUM CHAR(7),  VENDOR CHAR(7),  GL_ACCOUNT CHAR(15),  INVOICE CHAR(15),  FECHA_BUZON CHAR(8), DIAS_CREDITO NUMERIC(3,0),  VENCIMIENTO CHAR(8), EXPORTED BIT); CREATE UNIQUE INDEX GAB_5783_FECHAK001 ON GAB_5783_FechaBuzon(BATCH_NUM, VENDOR, INVOICE);")
+	f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.If(v.Caller.Hook,=,35105)
+	V.Passed.000052.Set("Fecha Buzon")
+'AP Batch Entry > New Invoice Script 2 Hook
+F.Intrinsic.Control.ElseIf(v.Caller.Hook,=,35122)
+	f.Intrinsic.Control.If(v.Passed.000002,=,"")
+		f.Intrinsic.UI.Msgbox("Porfavor Seleccione un Proovedor")
+	f.Intrinsic.Control.Else
+		V.Global.sVendor.Set(v.Passed.000002.Trim)
+		v.Global.sBatchNum.Set(v.Passed.000007.Trim)
+		v.Global.sGLAccount.Set(v.Passed.000014.Trim)
+		v.Global.sInvoice.Set(v.Passed.000018.Trim)
+		'f.Intrinsic.UI.Msgbox(v.Passed.000018)
+		'f.Intrinsic.UI.Msgbox(v.Global.sInvoice)
+'		f.Intrinsic.Control.CallSub(F_FechaBuzonLoad)
+		F.Intrinsic.Control.If(v.Global.sInvoice,=,"")
+			f.Intrinsic.UI.Msgbox("Porfavor Ingrese un Numero de Factura")
+		f.Intrinsic.Control.Else		
+			V.Global.sVendor.Set(v.Passed.000002.Trim)
+			v.Global.sBatchNum.Set(v.Passed.000007.Trim)
+			v.Global.sGLAccount.Set(v.Passed.000014.Trim)
+			'f.Intrinsic.UI.Msgbox(v.Global.sInvoice)
+			v.Global.sInvoice.Set(v.Passed.000018.Trim)
+			f.Intrinsic.Control.CallSub(F_FechaBuzonLoad)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.EndIf
+	
+	
+	'f.Intrinsic.Control.ElseIf(v.Caller.Hook,=,35124)
+
+''AP Batch Entry > New Invoice Pre Save 35110
+'f.Intrinsic.Control.ElseIf(v.Caller.Hook,=,35110)
+
+'AP Batch Entry > Invoice/Acurrals Populate Hook
+f.Intrinsic.Control.ElseIf(v.Caller.Hook,=,33510)
+	v.Passed.000165.Set("Fecha Buzon")
+
+'AP Batch Entry > Invoice/Acurrals Script 2 Hook
+f.Intrinsic.Control.ElseIf(v.Caller.Hook,=,33541)
+	V.Global.sVendor.Set(v.Passed.000051.Trim)
+	v.Global.sBatchNum.Set(v.Passed.000001.Trim)
+	'v.Global.sGLAccount.Set(v.Passed.000014.Trim)
+	v.Global.sInvoice.Set(v.Passed.000007.Trim)
+	f.Intrinsic.Control.CallSub(F_FechaBuzonLoad)
+
+	
+	
+F.Intrinsic.Control.ElseIf(v.Caller.Hook,=,16090)
+	F.Intrinsic.Control.If(v.Passed.009001,=,"000817")
+	v.local.sTerminal.Set(V.Passed.BIP_Terminal)
+
+		
+'		f.Intrinsic.String.Build("select distinct batch_num from BI_COMB_JE_AUDIT where RPTID = '000817' AND trmnl = '{0}'",v.Local.sTerminal,v.Local.sSQL)
+'		F.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.local.sBatchNumRep)
+'Function.Intrinsic.Debug.InvokeDebugger
+'Function.Intrinsic.Debug.Stop
+
+		f.Intrinsic.String.Build("select distinct count(batch_NUM) from BI_COMB_JE_AUDIT where RPTID = '000817' and trmnl = '{1}'",V.Global.sBatchNum,v.Local.sTerminal,V.Local.sSQL)
+		F.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sBatchCheck)
+		
+		f.Intrinsic.Control.If(v.Local.sBatchCheck,<>,"0")
+			'UPDATE AP_OPEN_ITEMS vs GAB_5783_FECHABUZON
+			f.Intrinsic.Control.CallSub(UpdateAP_OPEN_ITEMS)
+		F.Intrinsic.Control.Else
+			f.Intrinsic.Control.CallSub(F_FechaBuzon_UnLoad)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.EndIf
+'''''''''FECHA BUZON DASHBOARD'''''
+F.Intrinsic.Control.ElseIf(v.Caller.Switches,=,"B")
+	f.Intrinsic.Control.CallSub(F_Buzon_Dash_Load)
+
+F.Intrinsic.Control.EndIf
+Program.Sub.Main.End
+
+Program.Sub.F_FechaBuzonLoad.Start
+v.Local.sSQL.Declare
+v.Local.sMessage.Declare
+v.local.sDate.Declare
+'Function.Intrinsic.Debug.InvokeDebugger
+'Function.Intrinsic.Debug.Stop
+
+F.Intrinsic.String.Build("select discount_days from v_VENDOR_PAY_TO WHERE VENDOR = '{0}'",v.Global.sVendor,v.Local.sSQL)
+F.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Global.lCreditDay)
+
+f.Intrinsic.Control.If(v.Global.lCreditDay,=,"0")
+	f.Intrinsic.String.Build("Proovedor {0} no tiene asignado dias de credito",v.Global.sVendor,v.Local.sMessage)
+	f.Intrinsic.UI.Msgbox(v.Local.sMessage)
+f.Intrinsic.Control.EndIf
+
+'F.Intrinsic.String.DateString(v.ambient.now, v.local.sDate)
+'F.Intrinsic.UI.Msgbox(V.Local.sDate)
+'F.Intrinsic.Date.ConvertDString(V.Local.sDate,"YYYY/MM/DD", variable.local.sDate)
+
+gui.F_FechaBuzon..Show
+gui.F_FechaBuzon.txtDiasCredito.Text(v.Global.lCreditDay)
+'GUI.F_FechaBuzon.txtVencimiento.Text(v.local.sDate)
+Program.Sub.F_FechaBuzonLoad.End
+
+Program.Sub.dtpFechaBuzon_Change.Start
+v.Local.sFechaBuzon.Declare
+v.Local.sVencimiento.Declare
+
+v.Local.sFechaBuzon.Set(v.Screen.F_FechaBuzon!dtpFechaBuzon.Value)
+
+
+'add days to vencimiento
+F.Intrinsic.Date.DateAdd(D,v.Global.lCreditDay,v.Local.sFechaBuzon,v.Local.sVencimiento)
+F.Intrinsic.Date.ConvertDString(V.Local.sVencimiento,"MMDDYYYY",V.Local.sVencimiento)
+v.Global.sVencimiento.Set(v.Local.sVencimiento)
+F.Intrinsic.String.Format(V.local.sVencimiento,"DD/MM/YYYY",V.local.sVencimiento)
+gui.F_FechaBuzon.txtVencimiento.Text(v.Local.sVencimiento)
+
+
+
+'v.Passed.000026.Set(v.Local.sVencimiento)
+
+Program.Sub.dtpFechaBuzon_Change.End
+
+Program.Sub.cmdSaveFechaBuzon_Click.Start
+V.Local.sSQL.Declare
+v.Local.sFechaBuzon.Declare
+v.Local.sVencimiento.Declare
+
+v.Local.sFechaBuzon.Set(v.Screen.F_FechaBuzon!dtpFechaBuzon.Value)
+
+f.Intrinsic.Control.If(v.Global.sVencimiento,=,"")
+	'add days to vencimiento
+	F.Intrinsic.Date.DateAdd(D,v.Global.lCreditDay,v.Local.sFechaBuzon,v.Local.sVencimiento)
+	F.Intrinsic.Date.ConvertDString(V.Local.sVencimiento,"MMDDYYYY",V.Local.sVencimiento)
+	v.Global.sVencimiento.Set(v.Local.sVencimiento)
+	F.Intrinsic.String.Format(V.local.sVencimiento,"DD/MM/YYYY",V.local.sVencimiento)
+	gui.F_FechaBuzon.txtVencimiento.Text(v.Local.sVencimiento)
+f.Intrinsic.Control.Else
+	'f.Intrinsic.UI.Msgbox(v.Global.sVencimiento,"VENCIMIENTO")
+	'f.Intrinsic.UI.Msgbox(v.Screen.F_FechaBuzon!dtpFechaBuzon.Value,"fecha buzon dtp")
+	'f.Intrinsic.UI.Msgbox(V.Local.sFechaBuzon)
+	
+	'SAVE INFORMATION FROM FORM INTO CUSTOM TABLE CFDI_LEYENFISCALES
+	F.Intrinsic.String.Build("SELECT * FROM GAB_5783_FechaBuzon WHERE VENDOR = '{0}' AND INVOICE = '{1}' AND BATCH_NUM = '{2}'",V.Global.sVendor,V.Global.sInvoice,V.Global.sBatchNum,V.Local.sSQL)
+	F.ODBC.Connection!CONX.OpenLocalRecordsetRW("RST",v.Local.sSQL)
+	F.Intrinsic.Control.If(v.ODBC.CONX!RST.EOF,=,True)
+		F.ODBC.CONX!RST.AddNew
+		F.ODBC.CONX!RST.Set!VENDOR(V.Global.sVendor)
+		
+		F.ODBC.CONX!RST.Set!BATCH_NUM(V.Global.sBatchNum)
+		F.Intrinsic.Control.EndIf
+		F.ODBC.CONX!RST.Set!GL_ACCOUNT(V.Global.sGLAccount)
+		F.ODBC.CONX!RST.Set!INVOICE(V.Global.sInvoice)
+		'f.Intrinsic.UI.Msgbox(V.Screen.F_FechaBuzon!dtpFechaBuzon.Text)
+		F.Intrinsic.Date.ConvertDString(V.Screen.F_FechaBuzon!dtpFechaBuzon.Text,"MMDDYYYY", v.Local.sFechaBuzon)
+		F.Intrinsic.String.Format(v.Local.sFechaBuzon,"MMDDYYYY",v.Local.sFechaBuzon)
+		'f.Intrinsic.UI.Msgbox(v.Local.sFechaBuzon)
+		F.ODBC.CONX!RST.Set!FECHA_BUZON(v.Local.sFechaBuzon)
+		F.ODBC.CONX!RST.Set!DIAS_CREDITO(V.Screen.F_FechaBuzon!txtDiasCredito.Text)
+		'f.Intrinsic.UI.Msgbox(v.Global.sVencimiento)
+		'F.ODBC.CONX!RST.Set!VENCIMIENTO(V.Screen.F_FechaBuzon!txtVencimiento.Text)
+		F.Intrinsic.Date.ConvertDString(v.Global.sVencimiento,"MMDDYYYY", v.Global.sVencimiento)
+		F.Intrinsic.String.Format(v.Global.sVencimiento,"MMDDYY",v.Global.sVencimiento)
+		F.ODBC.CONX!RST.Set!VENCIMIENTO(v.Global.sVencimiento)
+		'f.Intrinsic.UI.Msgbox(v.Global.sVencimiento)
+		F.ODBC.CONX!RST.Set!EXPORTED(0)
+		F.ODBC.CONX!RST.Update
+		F.Intrinsic.UI.Msgbox("INFORMACION FECHA BUZON GUARDADA")
+		F.ODBC.CONX!RST.Close
+	f.Intrinsic.Control.End
+f.Intrinsic.Control.EndIf
+
+
+
+Program.Sub.cmdSaveFechaBuzon_Click.End
+
+Program.Sub.UpdateAP_OPEN_ITEMS.Start
+v.Local.sSQL.Declare
+v.Local.iCount.Declare
+v.Local.sBatchNum.Declare
+v.Local.sVendor.Declare
+v.Local.sGLAcct.Declare
+v.Local.sInvoice.Declare
+v.Local.sVencimiento.Declare
+v.Local.sBatchCheck.Declare
+
+'Function.Intrinsic.Debug.InvokeDebugger
+'Function.Intrinsic.Debug.Stop
+
+F.Data.DataTable.CreateFromSQL("FechaBuzon_DT", "CONX", "select * from GAB_5783_FechaBuzon Where EXPORTED = 0")
+
+f.Intrinsic.Control.For(v.Local.iCount,0,v.DataTable.FechaBuzon_DT.RowCount--,1)
+	v.Local.sBatchNum.Set(v.DataTable.FechaBuzon_DT(v.Local.iCount).BATCH_NUM!FieldValString)
+	v.Local.sVendor.Set(v.DataTable.FechaBuzon_DT(v.Local.iCount).VENDOR!FieldValString)
+'	v.Local.sGLAcct.Set(v.DataTable.FechaBuzon_DT(v.Local.iCount).GL_ACCOUNT!FieldValString)
+	v.Local.sInvoice.Set(v.DataTable.FechaBuzon_DT(v.Local.iCount).INVOICE!FieldValString)
+	v.Local.sVencimiento.Set(v.DataTable.FechaBuzon_DT(v.Local.iCount).VENCIMIENTO!FieldValString)
+	'f.Intrinsic.UI.Msgbox(v.Local.sVencimiento)
+	
+	F.Intrinsic.String.Build("select count(invoice) from AP_OPEN_ITEMS WHERE BATCH_NUM = '{0}' AND VENDOR = '{1}' AND INVOICE = '{2}'", V.Local.sBatchNum, V.Local.sVendor, v.Local.sInvoice, v.Local.sSQL)
+	F.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL, v.Local.sBatchCheck)
+	
+	f.Intrinsic.Control.If(v.Local.sBatchCheck,=,0)
+	f.Intrinsic.Control.Else
+		f.Intrinsic.String.Build("UPDATE AP_OPEN_ITEMS SET date_invoice_due = '{0}' WHERE VENDOR = '{1}' AND INVOICE = '{2}'",V.Local.sVencimiento, V.Local.sVendor, v.Local.sInvoice, v.Local.sSQL)
+		F.ODBC.Connection!conx.Execute(V.Local.sSQL)
+		
+		F.Intrinsic.String.Build("UPDATE GAB_5783_FechaBuzon SET EXPORTED = 1 WHERE BATCH_NUM = '{0}' AND VENDOR = '{1}' AND INVOICE = '{2}'",V.Local.sBatchNum, V.Local.sVendor, v.Local.sInvoice, v.Local.sSQL)
+		F.ODBC.Connection!conx.Execute(V.Local.sSQL)
+	f.Intrinsic.Control.EndIf
+	
+f.Intrinsic.Control.Next(v.Local.iCount)
+
+
+Program.Sub.UpdateAP_OPEN_ITEMS.End
+
+Program.Sub.F_FechaBuzon_UnLoad.Start
+F.ODBC.Connection!Conx.Close
+F.Intrinsic.Control.End
+Program.Sub.F_FechaBuzon_UnLoad.End
+
+'FECHA BUZON DASHBOARD 
+Program.Sub.F_Buzon_Dash_Load.Start
+'''TAB MXN''''
+f.Data.DataTable.CreateFromSQL("F_Buzon_Dash_MXN_DT","CONX","select A.USERID,A.BATCH_NUM,A.VENDOR,A.INVC_TAXABLE_AMT, A.INVC_TAX_AMT,ABS(A.AMT_INVOICE) AS AMT_INVOICE,A.PURCHASE_ORDER, B.GL_ACCOUNT,B.INVOICE,B.FECHA_BUZON,B.DIAS_CREDITO, B.VENCIMIENTO,B.EXPORTED,C.XML from AP_OPEN_ITEMS A INNER JOIN GAB_5783_FechaBuzon B ON A.BATCH_NUM = B.BATCH_NUM LEFT JOIN GAB_4743_GLXML C ON B.BATCH_NUM = C.BATCH AND B.GL_ACCOUNT = C.GL_NUMBER WHERE A.EXCHANGE_CURR = 'MXN' AND A.BATCH_CODE = '10'",True)
+'AND A.BATCH_CODE = '10'
+f.Data.DataView.Create("F_Buzon_Dash_MXN_DT", "F_Buzon_Dash_MXN_DV", 22)
+gui.F_FechaBuzonDash.GsGridMXN.AddGridviewFromDataview("F_Buzon_Dash_MXN_GV", "F_Buzon_Dash_MXN_DT", "F_Buzon_Dash_MXN_DV")
+
+
+gui.F_FechaBuzonDash.GsGridMXN.SetGridviewProperty("F_Buzon_Dash_MXN_GV","AllowSort",True)
+gui.F_FechaBuzonDash.GsGridMXN.SetGridviewProperty("F_Buzon_Dash_MXN_GV","AllowFilter",True)
+gui.F_FechaBuzonDash.GsGridMXN.SetGridviewProperty("F_Buzon_Dash_MXN_GV","OptionsDetailShowDetailTabs",False)
+gui.F_FechaBuzonDash.GsGridMXN.SetGridviewProperty("F_Buzon_Dash_MXN_GV","OptionsViewShowGroupPanel",True)
+gui.F_FechaBuzonDash.GsGridMXN.SetGridviewProperty("F_Buzon_Dash_MXN_GV","EnableAppearanceOddRow",True)
+
+
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","USERID","CAPTION","USUARIO")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","BATCH_NUM","CAPTION","BATCH")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENDOR","CAPTION","PROVEEDOR")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAXABLE_AMT","CAPTION","SUBTOTAL")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAX_AMT","CAPTION","IMPUESTO 1")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","AMT_INVOICE","CAPTION","TOTAL")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","PURCHASE_ORDER","CAPTION","ORDEN DE COMPRA")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","GL_ACCOUNT","CAPTION","CUENTA GL")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVOICE","CAPTION","NO. FACTURA")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","FECHA_BUZON","CAPTION","FECHA BUZON")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","DIAS_CREDITO","CAPTION","DIAS DE CREDITO")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENCIMIENTO","CAPTION","VENCIMIENTO")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","EXPORTED","CAPTION","EXPORTADO")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","XML","CAPTION","XML")
+
+
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","USERID","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","BATCH_NUM","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENDOR","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAXABLE_AMT","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAX_AMT","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","AMT_INVOICE","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","PURCHASE_ORDER","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","GL_ACCOUNT","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVOICE","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","FECHA_BUZON","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","DIAS_CREDITO","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENCIMIENTO","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","EXPORTED","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","XML","HeaderBackColor","LightBlue")
+
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","USERID","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","BATCH_NUM","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENDOR","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAXABLE_AMT","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAX_AMT","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","AMT_INVOICE","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","PURCHASE_ORDER","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","GL_ACCOUNT","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVOICE","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","FECHA_BUZON","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","DIAS_CREDITO","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENCIMIENTO","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","EXPORTED","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","XML","MinWidth","150")
+
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","USERID","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","BATCH_NUM","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENDOR","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAXABLE_AMT","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAX_AMT","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","AMT_INVOICE","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","PURCHASE_ORDER","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","GL_ACCOUNT","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVOICE","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","FECHA_BUZON","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","DIAS_CREDITO","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENCIMIENTO","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","EXPORTED","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","XML","HeaderHAlignment", "Center")
+
+
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","USERID","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","BATCH_NUM","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENDOR","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAXABLE_AMT","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAX_AMT","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","AMT_INVOICE","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","PURCHASE_ORDER","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","GL_ACCOUNT","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVOICE","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","FECHA_BUZON","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","DIAS_CREDITO","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENCIMIENTO","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","EXPORTED","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","XML","ReadOnly", True)
+
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","USERID","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","BATCH_NUM","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENDOR","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAXABLE_AMT","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVC_TAX_AMT","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","AMT_INVOICE","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","PURCHASE_ORDER","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","GL_ACCOUNT","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","INVOICE","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","FECHA_BUZON","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","DIAS_CREDITO","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENCIMIENTO","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","EXPORTED","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","XML","CellHAlignment", "Center")
+
+
+'gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","FECHA_BUZON","EditMaskType","DateTime")
+'gui.F_FechaBuzonDash.GsGridMXN.SetColumnProperty("F_Buzon_Dash_MXN_GV","VENCIMIENTO","EditMaskType","DateTime")
+
+
+gui.F_FechaBuzonDash.GsGridMXN.MainView("F_Buzon_Dash_MXN_GV")
+gui.F_FechaBuzonDash.GsGridMXN.Anchor(15)
+
+
+
+
+''''''TAB USD''''''''''''''
+f.Data.DataTable.CreateFromSQL("F_Buzon_Dash_USD_DT","CONX","select A.USERID,A.BATCH_NUM,A.VENDOR,A.EXCHANGE_AMT, A.EXCHANGE_CURR,A.EXCHANGE_RATE,A.PURCHASE_ORDER, B.GL_ACCOUNT,B.INVOICE,B.FECHA_BUZON,B.DIAS_CREDITO, B.VENCIMIENTO,B.EXPORTED,C.XML from AP_OPEN_ITEMS A LEFT JOIN GAB_5783_FechaBuzon B ON A.BATCH_NUM = B.BATCH_NUM LEFT JOIN GAB_4743_GLXML C ON B.BATCH_NUM = C.BATCH AND B.GL_ACCOUNT = C.GL_NUMBER WHERE A.EXCHANGE_CURR = 'USD'AND A.BATCH_CODE = '10'",True)
+'AND A.BATCH_CODE = '10'
+f.Data.DataView.Create("F_Buzon_Dash_USD_DT", "F_Buzon_Dash_USD_DV", 22)
+gui.F_FechaBuzonDash.GsGridUSD.AddGridviewFromDataview("F_Buzon_Dash_USD_GV", "F_Buzon_Dash_USD_DT", "F_Buzon_Dash_USD_DV")
+
+gui.F_FechaBuzonDash.GsGridUSD.SetGridviewProperty("F_Buzon_Dash_USD_GV","AllowSort",True)
+gui.F_FechaBuzonDash.GsGridUSD.SetGridviewProperty("F_Buzon_Dash_USD_GV","AllowFilter",True)
+gui.F_FechaBuzonDash.GsGridUSD.SetGridviewProperty("F_Buzon_Dash_USD_GV","OptionsDetailShowDetailTabs",False)
+gui.F_FechaBuzonDash.GsGridUSD.SetGridviewProperty("F_Buzon_Dash_USD_GV","OptionsViewShowGroupPanel",True)
+gui.F_FechaBuzonDash.GsGridUSD.SetGridviewProperty("F_Buzon_Dash_USD_GV","EnableAppearanceOddRow",True)
+
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","USERID","CAPTION","USUARIO")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","BATCH_NUM","CAPTION","BATCH")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENDOR","CAPTION","PROVEEDOR")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_AMT","CAPTION","TOTAL MONEDA EXTRANJERA")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_CURR","CAPTION","MONEDA")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_RATE","CAPTION","TIPO DE CAMBIO")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","PURCHASE_ORDER","CAPTION","ORDEN DE COMPRA")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","GL_ACCOUNT","CAPTION","CUENTA GL")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","INVOICE","CAPTION","NO. FACTURA")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","FECHA_BUZON","CAPTION","FECHA BUZON")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","DIAS_CREDITO","CAPTION","DIAS DE CREDITO")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENCIMIENTO","CAPTION","VENCIMIENTO")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXPORTED","CAPTION","EXPORTADO")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","XML","CAPTION","XML")
+
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","USERID","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","BATCH_NUM","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENDOR","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_AMT","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_CURR","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_RATE","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","PURCHASE_ORDER","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","GL_ACCOUNT","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","INVOICE","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","FECHA_BUZON","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","DIAS_CREDITO","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENCIMIENTO","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXPORTED","MinWidth","150")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","XML","MinWidth","150")
+
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","USERID","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","BATCH_NUM","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENDOR","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_AMT","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_CURR","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_RATE","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","PURCHASE_ORDER","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","GL_ACCOUNT","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","INVOICE","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","FECHA_BUZON","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","DIAS_CREDITO","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENCIMIENTO","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXPORTED","HeaderBackColor","LightBlue")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","XML","HeaderBackColor","LightBlue")
+
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","USERID","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","BATCH_NUM","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENDOR","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_AMT","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_CURR","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_RATE","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","PURCHASE_ORDER","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","GL_ACCOUNT","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","INVOICE","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","FECHA_BUZON","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","DIAS_CREDITO","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENCIMIENTO","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXPORTED","HeaderHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","XML","HeaderHAlignment", "Center")
+
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","USERID","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","BATCH_NUM","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENDOR","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_AMT","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_CURR","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_RATE","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","PURCHASE_ORDER","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","GL_ACCOUNT","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","INVOICE","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","FECHA_BUZON","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","DIAS_CREDITO","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENCIMIENTO","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXPORTED","ReadOnly", True)
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","XML","ReadOnly", True)
+
+
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","USERID","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","BATCH_NUM","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENDOR","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_AMT","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_CURR","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXCHANGE_RATE","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","PURCHASE_ORDER","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","GL_ACCOUNT","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","INVOICE","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","FECHA_BUZON","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","DIAS_CREDITO","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENCIMIENTO","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","EXPORTED","CellHAlignment", "Center")
+gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","XML","CellHAlignment", "Center")
+
+'gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","FECHA_BUZON","EditMaskType","DateTime")
+'gui.F_FechaBuzonDash.GsGridUSD.SetColumnProperty("F_Buzon_Dash_USD_GV","VENCIMIENTO","EditMaskType","DateTime")
+
+
+gui.F_FechaBuzonDash.GsGridUSD.MainView("F_Buzon_Dash_USD_GV")
+gui.F_FechaBuzonDash.GsGridUSD.Anchor(15)
+
+gui.F_FechaBuzonDash.tabFB.Anchor(15)
+gui.F_FechaBuzonDash.cmdReload.Anchor(15)
+GUI.F_FechaBuzonDash..Show
+
+Program.Sub.F_Buzon_Dash_Load.End
+
+Program.Sub.cmdReload_Click.Start
+f.Intrinsic.Control.If(v.DataTable.F_Buzon_Dash_MXN_DT.Exists,=,true)
+	f.Data.DataView.Close("F_Buzon_Dash_MXN_DT", "F_Buzon_Dash_MXN_DV")
+	f.Data.DataTable.Close("F_Buzon_Dash_MXN_DT")
+f.Intrinsic.Control.EndIf
+
+
+f.Intrinsic.Control.If(v.DataTable.F_Buzon_Dash_USD_DT.Exists,=,true)
+	f.Data.DataView.Close("F_Buzon_Dash_USD_DT", "F_Buzon_Dash_USD_Dv")
+	f.Data.DataTable.Close("F_Buzon_Dash_USD_DT")
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.Control.CallSub(F_Buzon_Dash_Load)
+Program.Sub.cmdReload_Click.End
